@@ -6,7 +6,7 @@ import { unique } from '../../utils/arrays-utils';
 const meliUrl = new URL(env.MELI_URL);
 const meliUiUrl = new URL(env.MELI_UI_URL);
 
-export function generateManualCertificatesConfig(sites: Site[]) {
+export function generateManualCertificatesConfig(sites: Site[]): Caddy.TlsCertificates {
   const domains = sites
     .flatMap(site => site.domains)
     .filter(domain => domain?.sslConfiguration?.type === 'manual');
@@ -34,7 +34,8 @@ export function generateServerTlsConfig(sites: Site[]) {
       .map(domain => domain.name),
   ].filter(unique);
   const manualCertificatesDomains = sitesDomains
-    .filter(domain => domain.sslConfiguration?.type !== 'acme');
+    .filter(domain => domain.sslConfiguration?.type !== 'acme')
+    .map(domain => domain.name);
 
   return {
     tls_connection_policies: [
@@ -46,15 +47,15 @@ export function generateServerTlsConfig(sites: Site[]) {
       },
       ...manualCertificatesDomains.map(domain => ({
         match: {
-          sni: [domain.name],
+          sni: [domain],
         },
         certificate_selection: {
-          all_tags: [domain.name],
+          all_tags: [domain],
         },
       })),
     ],
     automatic_https: {
-      skip: manualCertificatesDomains.map(domain => domain.name),
+      skip: manualCertificatesDomains,
       // TODO disable and test if it still works
     },
   };
